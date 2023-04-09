@@ -1,0 +1,102 @@
+library(magrittr) 
+library(dplyr)
+library(lubridate)
+#1 - Tìm 1 dataset bất kỳ
+
+data <- read.csv("C:\\Users\\TechCare\\Documents\\giuaKi\\youtube.csv")
+
+View(data$VideoLength) #Hiển thị dữ liệu trong dataset
+summary(data) #Thống kê cơ bản về các dữ liệu (min, max,...)
+str(data) #Hiển thị kiểu dữ liệu của các cột trong dataset
+
+#2 - Giải thích các biến cột trong dataset
+
+nrow(data) #Hiển thị các hàng trong dataset
+ncol(data) #Hiển thị các cột trong dataset
+#Date: ngày giờ
+#VideoTitle: tên video
+#VideoID: id video
+#VideoLength: độ dài video tính theo giây
+#Thumbnaillink: đường dẫn ảnh video
+#Views: lượt xem video tính từ thời gian gần nhất
+#VideoLikesAdded: số người like video tính từ thời gian gần nhất
+#VideoDislikesAdded: số người dislike video tính từ thời gian gần nhất
+#UserSubscriptionsAdded: số người dùng đăng ký kênh khi xem video tính từ thời gian gần nhất
+#UserSubscriptionsRemoved: số người dùng hủy đăng ký kênh khi xem video tính từ thời gian gần nhất
+#AverageViewPercentage: lượt xem trung bình tính từ thời gian gần nhất
+#AverageWatchTime: thời gian xem trung bình tính từ thời gian gần nhất
+#UserCommentsAdded: số người dùng bình luận tính từ thời gian gần nhất
+
+#3- làm sạch dữ liệu(xử lý các dữ liệu bị thiếu)
+
+
+sum(is.na(data)) # Đếm số lượng dữ liệu NA trong dataset
+
+data = na.omit(data) # Loại bỏ các dòng có giá trị NA 
+nrow(data)
+sum(data$AverageWatchTime == 0)
+
+data = data[data$AverageWatchTime > 0, ] # Loại bỏ các dòng AverageWatchTime có giá trị  = 0
+
+#4- Tạo các biến mới dựa vào các biến đã có và các điều kiện (tuỳ ý)
+#Thêm vào dataset 1 cột mới LikePercent tính % số người xem đã thích video tính từ thời gian gần nhất
+data = data%>%mutate(LikePercent = VideoLikesAdded / Views * 100)
+View(data)
+
+#5- Các vấn đề cần biết:
+
+#1. Với mỗi VideoID thì có tổng bao nhiêu lượt like?
+#group_by nhóm dữ liệu giữa các cột
+#summarise() tạo 1 dataframe mới(hàm sum(VideoLikesAdded) tính tổng số like)
+#ungroup() hủy bỏ nhóm
+totalLike <- data%>%group_by(VideoID)%>%summarise(like = sum(VideoLikesAdded),.groups = "keep")%>%ungroup()%>%arrange(desc(like))
+View(totalLike)
+#2. Video có lượt like cao nhất
+#arrange() sắp xếp theo thứ tự tăng dần
+#desc sắp xếp theo thứ tự giảm dần
+like<-data%>%group_by(VideoTitle)%>%summarise(like = sum(VideoLikesAdded), .groups = "keep")%>%ungroup()%>%arrange(desc(like))
+View(like$VideoTitle[1])
+#3.Video có lượt dislike cao nhất?
+dislike<-data%>%group_by(VideoTitle)%>%summarise(dislike = sum(VideoDislikesAdded), .groups = "keep")%>%ungroup()%>%arrange(desc(dislike))
+View(dislike$VideoTitle[1])
+#4.Video có lượt xem nhiều nhất?
+topView<-data%>%group_by(VideoTitle)%>%summarise(topView = sum(Views), .groups = "keep")%>%ungroup()%>%arrange(desc(topView))
+View(topView$VideoTitle[1])
+# Bài 1
+
+data$Date <- as.Date(data$Date, '%d-%b-%y')
+day <- data$Date
+data1 <- data.frame(day)
+c <- data1
+data1$day <- strftime(data1$day, "%A")
+day<- data1$day
+data = data%>%mutate(data.frame(day))
+View(data)
+topViewDay<-data%>%group_by(day)%>%summarise(topViewDay = sum(Views), .groups = "keep")%>%ungroup()%>%arrange(desc(topViewDay))
+View(topViewDay)
+topViewDay<-data%>%group_by(Date)%>%summarise(topViewDay = sum(Views), .groups = "keep")%>%ungroup()%>%arrange()
+View(topViewDay$Date)
+tail(topViewDay$Date,1)
+head(topViewDay$Date,1)
+# Bài 2
+
+#view
+timeView <- data %>%
+  group_by(VideoLength)%>%
+  summarise(topView = sum(Views), .groups = "keep")%>%
+  ungroup()%>%
+  arrange(desc(topView),VideoLength)
+View(timeView)
+
+Minute_10 <- timeView$VideoLength >1 & timeView$VideoLength <= 600
+Minute_10 <- timeView[Minute_10, ]
+Minute_10 <- sum(Minute_10)
+Minute_30 <- timeView$VideoLength >600 & timeView$VideoLength <= 1800
+Minute_30 <- timeView[Minute_30, ]
+Minute_30 <- sum(Minute_30)
+Minute_60 <- timeView$VideoLength >1800
+Minute_60 <- timeView[Minute_60, ]
+Minute_60 <- sum(Minute_60)
+timeMostViews <- data.frame(Time = c('0->10p','10p-30p','30p->'),
+                            Views = c(Minute_10,Minute_30,Minute_60))
+View(timeMostViews)
